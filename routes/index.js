@@ -38,6 +38,7 @@ var getLas15IssuesForAuthenticUser = function(user) {
 var getLast15Issues = function(authToken, user) {
      zabbix.body = '{"jsonrpc": "2.0","method": "trigger.get","params": { "output": [ "triggerid", "hostids", "host", "description", "priority" ], "expandData": "hostname", "filter": {"value": 1 }, "sortfield": "priority",  "sortorder": "DESC", "limit": 15},  "auth": "' + authToken +'",     "id": 1}';
      var respString = "";
+console.log(zabbix);
      //request to get status
     request(zabbix, function (error, response, body) {
         if (!error && response.statusCode == 200) {
