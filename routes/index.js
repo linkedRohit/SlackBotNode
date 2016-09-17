@@ -20,12 +20,15 @@ var zabbix = {
         headers: postHeaders,
     };
 
+var slackResponse = {
+    'method': 'POST',
+    headers : { 'Content-Type' : 'application/json' }
+}
 var getLas15IssuesForAuthenticUser = function(user) {
     zabbix.body = '{"jsonrpc": "2.0","method": "user.login", "params": {"user": "watcher","password": "watcher@"},"id": 1}';
     var x = '';
     request(zabbix, function (error, response, body) {
         if (!error && response.statusCode == 200) {
-console.log(user);
             getLast15Issues(JSON.parse(body).result, user);
         } else {
         }
@@ -33,7 +36,6 @@ console.log(user);
 }
 
 var getLast15Issues = function(authToken, user) {
-console.log(user);
      zabbix.body = '{"jsonrpc": "2.0","method": "trigger.get","params": { "output": [ "triggerid", "hostids", "host", "description", "priority" ], "expandData": "hostname", "filter": {"value": 1 }, "sortfield": "priority",  "sortorder": "DESC", "limit": 15},  "auth": "' + authToken +'",     "id": 1}';
      var respString = "";
      //request to get status
@@ -53,10 +55,10 @@ console.log(user);
 }
 
 var sendMessageToSlack = function(text, userId) {
-console.log(userId);
-        var data = {'token': token , 'text':text };
-        var url = slackAPI + 'chat.postMessage?token=' + token + "&text=" + text + "&channel=" + userId + "&type=message";
-        request(url, function(error, response, body) {});
+        slackResponse.body = '{"text": "' + text + '" }';
+        slackResponse.url = userId;
+//        var url = slackAPI + 'chat.postMessage?token=' + token + "&text=" + text + "&channel=" + userId + "&type=message";
+        request(slackResponse, function(error, response, body) {});
 }
 
 /* POST apache server status. */
@@ -65,12 +67,12 @@ router.post('/apache', function(req, res, next) {
     var slackResp = "";
     var user = req.body.user_id;
     var token = req.body.token;
+    var respUrl = req.body.response_url;//'https://hooks.slack.com/commands/T25JQQMNV/80832884099/rxUcuwPARiKPg4AiuvEMKMQX';//req.body.response_url;
     if(token != "QI3OZmyCwtYiu9bc14ay9DMm") {
         res.sendStatus(403);
     }
     //Athenticate user
-    var issuesList = getLas15IssuesForAuthenticUser(user);
-    console.log(issuesList); 
+    var issuesList = getLas15IssuesForAuthenticUser(respUrl);
     res.send(issuesList);
    // res.sendStatus(200);
 /*    //send response to slack api
