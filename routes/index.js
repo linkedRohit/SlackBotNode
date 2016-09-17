@@ -57,6 +57,7 @@ var getLast15Issues = function(authToken, user) {
 var sendMessageToSlack = function(text, userId) {
         slackResponse.body = '{"text": "' + text + '" }';
         slackResponse.url = userId;
+console.log(slackResponse);
 //        var url = slackAPI + 'chat.postMessage?token=' + token + "&text=" + text + "&channel=" + userId + "&type=message";
         request(slackResponse, function(error, response, body) {});
 }
