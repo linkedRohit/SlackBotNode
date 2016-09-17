@@ -60,10 +60,10 @@ var sendMessageTOSlack = function(text, userId) {
 
 /* POST apache server status. */
 router.post('/apache', function(req, res, next) {
-console.log(req.body);
     var request = require('request');
     var slackResp = "";
-    var user = req.body.userId;
+    var user = req.body.user_id;
+console.log(user, JSON.parse(req.body).user_id);
     //Athenticate user
     var issuesList = getLas15IssuesForAuthenticUser();
     console.log(issuesList); 
