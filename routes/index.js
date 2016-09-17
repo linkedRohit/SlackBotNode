@@ -43,7 +43,7 @@ var getLast15Issues = function(authToken) {
     });
 }
 /* POST apache server status. */
-router.get('/apache', function(req, res, next) {
+router.post('/apache', function(req, res, next) {
     var request = require('request');
     var slackResp = "";
     var user = req.body.userId;
