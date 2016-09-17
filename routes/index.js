@@ -65,7 +65,7 @@ router.post('/apache', function(req, res, next) {
     var slackResp = "";
     var user = req.body.user_id;
     var token = req.body.token;
-    if(token == "QI3OZmyCwtYiu9bc14ay9DMm") {
+    if(token != "QI3OZmyCwtYiu9bc14ay9DMm") {
         res.sendStatus(403);
     }
     //Athenticate user
