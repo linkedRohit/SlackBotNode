@@ -63,7 +63,7 @@ router.post('/apache', function(req, res, next) {
     var request = require('request');
     var slackResp = "";
     var user = req.body.user_id;
-console.log(user, JSON.parse(req.body).user_id);
+console.log(user);
     //Athenticate user
     var issuesList = getLas15IssuesForAuthenticUser();
     console.log(issuesList); 
