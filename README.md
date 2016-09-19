@@ -1,5 +1,7 @@
 **Brief about the project**
-    Keeping in mind that ours is a website that is used by millions, we are constantly striving for no downtime. In such cases, we need tools which can help us resolve issues faster and with minimal resource involvement. Hence we have implemented some features we could think of and are planning to add more.
+    Keeping in mind that ours is a website that is used by millions, we are constantly striving for no downtime. 
+    In such cases, we need tools which can alert fast, help us resolve issues faster and with minimal resource involvement. 
+    Hence we have developed a slack bot and implemented some features we could think of and are planning to add more.
 
 
 Features :
@@ -18,6 +20,7 @@ Features :
     **In plan :**
     1. Get team's **velocity** and the performance metrics on the go (JIRA integration)
     2. Get **P1s reported for any team** in the team specific group
+    3. 
     ... and many more to come
     
 
