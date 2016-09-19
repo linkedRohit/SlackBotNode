@@ -60,22 +60,30 @@ var getServerStatus = function(authToken, user, server) {
     zabbix.body = '{"jsonrpc": "2.0","method": "user.login", "params": {"user": "watcher","password": "watcher@"},"id": 1}';
     request(zabbix, function (error, response, body) {
         if (!error && response.statusCode == 200) {
-	    zabbix.body = ' {    "jsonrpc": "2.0",    "method": "host.get",    "params": {        "output": "extend",        "filter": {            "host": ["' + server + '"]        }    },    "auth": "' + JSON.parse(body).result +'", "id": 1}';
+	    zabbix.body = ' {    "jsonrpc": "2.0",    "method": "hostinterface.get",    "params": {  "search": {            "ip": ["' + server + '"]        }    },    "auth": "' + JSON.parse(body).result +'", "id": 1}';
 
 
     var respString = "";
     request(zabbix, function (error, response, body) {
         if (!error && response.statusCode == 200) {
             var serverList = JSON.parse(body).result;
-            respString = "*Below is the status of apache servers*" + "\n";
-            for (var i = 0, len = serverList.length; i < len; i++) {
-                respString += "Server : "  + serverList[i].host + " | Status : " + serverList[i].status + " | Last accessed on : " + serverList[i].lastaccess + " | Errors : " + serverList[i].error + "\n";
+	    var hostid =serverList[0].hostid;
+	    zabbix.body = ' {    "jsonrpc": "2.0",    "method": "item.get", "params": {"hostids":"'+hostid+'"}, ,    "auth": "' + serverList.auth +'", "id": 1}';
+            request(zabbix, function (error, response, body) {
+		if (!error && response.statusCode == 200) {
+		respString = "*Below is the status of apache servers*" + "\n";
+	  	var itemList = JSON.parse(body).result;  
+            for (var i = 0, len = itemList.length; i < len; i++) {
+		respString += itemList[i].name+" : "+itemList[i].lastvalue+ " "+itemList[i].units+ "\n";
+//                respString += "Server : "  + serverList[i].host + " | Status : " + serverList[i].status + " | Last accessed on : " + serverList[i].lastaccess + " | Errors : " + serverList[i].error + "\n";
             }
         sendMessageToSlack(respString, user);
+	}
+	});
         } else {
             respString = error;
         }
-    });
+   });
         } else {
         }
     });
