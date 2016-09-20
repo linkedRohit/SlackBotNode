@@ -55,7 +55,7 @@ console.log(zabbix);
     });
 }
 
-var getServerStatus = function(authToken, user, server) {
+var getServerStatus = function(authToken, user, server, type) {
     var token = "";
     zabbix.body = '{"jsonrpc": "2.0","method": "user.login", "params": {"user": "watcher","password": "watcher@"},"id": 1}';
     request(zabbix, function (error, response, body) {
@@ -74,70 +74,9 @@ var getServerStatus = function(authToken, user, server) {
 	    zabbix.body = ' {    "jsonrpc": "2.0",    "method": "item.get", "params": {"hostids":"'+hostid+'"},    "auth": "' + token +'", "id": 1}';
             request(zabbix, function (error, response, body) {
 		if (!error && response.statusCode == 200) {
-	  	var itemList = JSON.parse(body).result; 
-		var bw = 'NA';
-		var iw = 'NA';
-		var load = 'NA';
-		var rqs = 'NA'; 
-           for (var i = 0, len = itemList.length; i < len; i++) {
-		if(itemList[i]['key_'] == 'apache[localhost,BusyWorkers]') bw = itemList[i].lastvalue;
-		else if(itemList[i]['key_'] == 'apache[localhost,IdleWorkers]') iw = itemList[i].lastvalue;
-		else if(itemList[i]['key_'] == 'apache[localhost,CPULoad]' ) load = itemList[i].lastvalue;
-		else if(itemList[i]['key_'] == 'apache[localhost,ReqPerSec]' ) rqs = itemList[i].lastvalue;
-//		respString += itemList[i].name+" : "+itemList[i].lastvalue+ " "+itemList[i].units+ "\n";
-//                respString += "Server : "  + serverList[i].host + " | Status : " + serverList[i].status + " | Last accessed on : " + serverList[i].lastaccess + " | Errors : " + serverList[i].error + "\n";
-            }
-       respString = {
-    "attachments": [
-        {
-            "color": "#3AA3E3",
-            "pretext": "Apache Status for "+ipaddr,
-            "fields": [
-                {
-                    "title": "Busy Workers",
-                    "value": bw+" workers",
-                    "short": true
-                },
-				{
-                    "title": "Idle Workers",
-                    "value": iw+" workers",
-                    "short": true
-                },
-				{
-                    "title": "CPU Load",
-                    "value": load,
-                    "short": true
-                },
-				{
-                    "title": "Requests Per Second",
-                    "value": rqs,
-                    "short": true
-                }
-				
-            ]
-        },
-		{
-			"color": "#8bc34a",
-			"title": "View Available Graphs",
-			"actions": [
-                {
-                    "name": "view-graph",
-                    "text": "View Busy Wokers",
-                    "type": "button",
-                    "value": "chess"
-                },
-				{
-                    "name": "view-graph",
-                    "text": "View Req/Sec",
-                    "type": "button",
-                    "value": "chess"
-                }
-			]
-		}
-    ]
-};
-	sendAttachmentToSlack(JSON.stringify(respString), user);
-	}
+    	  	var itemList = JSON.parse(body).result;
+            sendPowerfulAttachments( type, user, itemList, ipaddr );
+	    }
 	});
         } else {
             respString = error;
@@ -147,6 +86,123 @@ var getServerStatus = function(authToken, user, server) {
         }
     });
 };
+
+var sendPowerfulAttachments = function(type, user, itemList, ipaddr){
+    var respString = "Sorry! There is nothing like this exists :("
+    if(type=='apache'){
+        respString = getApacheString( itemList, ipaddr );
+    }
+    if(type == 'disk'){
+        respString = getDiskString( itemList, ipaddr );
+    }
+    respString.response_type = 'in_channel';
+    sendAttachmentToSlack(JSON.stringify(respString), user);
+}
+
+var getDiskString = function(itemList, ipaddr){
+    var fields = [];
+    for (var i = 0, len = itemList.length; i < len; i++) {
+        if( itemList[i]['key_'].startsWith('vfs.fs.size') )
+        {
+            var did = itemList[i]['key_'].substring(12).split(",");
+            var name = did[0];
+            var type = did[1].split("]")[0];
+
+            if(typeof(fields[name]) == 'undefined') fields[name] = [];
+            fields[name][type] = itemList[i]['lastvalue'];
+        }
+    }
+
+    var json = {
+        "attachments": [{
+            "fallback": "Disk Space on "+ipaddr,
+            "color": "#3AA3E3",
+            "fields":[]
+        }]
+    };
+
+    for(obj in fields){
+        json.attachments[0].fields.push({
+            "title": "Mount on "+obj,
+            "value": "Used: "+gb(fields[obj]['used'])+"GB ("+rnd(fields[obj]['pused'])+"%), Free: "+gb(fields[obj]['free'])+"GB ("+rnd(fields[obj]['pfree'])+")%",
+            "short": false
+        });
+    }
+
+    return json;
+};
+
+var gb = function(val){
+    return rnd(val/8589934592);
+}
+
+var rnd = function(val){
+    return Math.round(val*100)/100;
+}
+
+var getApacheString = function(itemList, ipaddr){
+    var bw = 'NA';
+    var iw = 'NA';
+    var load = 'NA';
+    var rqs = 'NA';
+    for (var i = 0, len = itemList.length; i < len; i++) {
+        if(itemList[i]['key_'] == 'apache[localhost,BusyWorkers]') bw = itemList[i].lastvalue;
+        else if(itemList[i]['key_'] == 'apache[localhost,IdleWorkers]') iw = itemList[i].lastvalue;
+        else if(itemList[i]['key_'] == 'apache[localhost,CPULoad]' ) load = itemList[i].lastvalue;
+        else if(itemList[i]['key_'] == 'apache[localhost,ReqPerSec]' ) rqs = itemList[i].lastvalue;
+        else console.log(itemList[i]['key_'], itemList[i]['name']);
+    }
+   return {
+"attachments": [
+    {
+        "fallback": "Apache Status for "+ipaddr,
+        "color": "#3AA3E3",
+        "pretext": "Apache Status for "+ipaddr,
+        "fields": [
+            {
+                "title": "Busy Workers",
+                "value": bw+" workers",
+                "short": true
+            },
+            {
+                "title": "Idle Workers",
+                "value": iw+" workers",
+                "short": true
+            },
+            {
+                "title": "CPU Load",
+                "value": load,
+                "short": true
+            },
+            {
+                "title": "Requests Per Second",
+                "value": rqs,
+                "short": true
+            }
+
+        ]
+    },
+    {
+        "color": "#8bc34a",
+        "title": "View Available Graphs",
+        "actions": [
+            {
+                "name": "view-graph",
+                "text": "View Busy Wokers",
+                "type": "button",
+                "value": "chess"
+            },
+            {
+                "name": "view-graph",
+                "text": "View Req/Sec",
+                "type": "button",
+                "value": "chess"
+            }
+        ]
+    }
+]
+};
+}
 
 var sendMessageToSlack = function(text, userId) {
         slackResponse.body = '{"text": "' + text + '" , "mrkdwn": true}';
@@ -173,7 +229,47 @@ console.log(req.body);
     if(token != "QI3OZmyCwtYiu9bc14ay9DMm") {
         res.sendStatus(403);
     }
-    var x = getServerStatus(token, respUrl, server);
+    var x = getServerStatus(token, respUrl, server, 'apache');
+    res.send(x);
+} catch(err) {
+console.log(err);
+    res.sendStatus(400);
+}
+});
+
+/* POST disk space server status. */
+router.post('/disk', function(req, res, next) {
+try {
+    var slackResp = "";
+console.log(req.body);
+    var user = req.body.user_id;
+    var token = req.body.token;
+    var server = req.body.text;
+    var respUrl = req.body.response_url;//'https://hooks.slack.com/commands/T25JQQMNV/80832884099/rxUcuwPARiKPg4AiuvEMKMQX';//req.body.response_url;
+    if(token != "aiQ1061vAZAnrXSiatr5xOef") {
+        res.sendStatus(403);
+    }
+    var x = getServerStatus(token, respUrl, server, 'disk');
+    res.send(x);
+} catch(err) {
+console.log(err);
+    res.sendStatus(400);
+}
+});
+
+/* POST mysql server status. */
+router.post('/mysql', function(req, res, next) {
+try {
+    var slackResp = "";
+console.log(req.body);
+    var user = req.body.user_id;
+    var token = req.body.token;
+    var server = req.body.text;
+    var respUrl = req.body.response_url;//'https://hooks.slack.com/commands/T25JQQMNV/80832884099/rxUcuwPARiKPg4AiuvEMKMQX';//req.body.response_url;
+    if(token != "QI3OZmyCwtYiu9bc14ay9DMm") {
+        res.sendStatus(403);
+    }
+    var x = getServerStatus(token, respUrl, server, 'mysql');
     res.send(x);
 } catch(err) {
 console.log(err);
@@ -242,7 +338,7 @@ try {
 //        var url = slackAPI + 'chat.postMessage?token=' + token + "&text=" + text + "&channel=" + userId + "&type=message";
 //showTyping(channel_name, respUrl);
        request(rosterApi, function(error, response, body) {});
-	
+
 	res.send('fetching ...');
        //res.sendStatus(200);
 } catch(err) {
