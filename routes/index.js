@@ -56,28 +56,87 @@ console.log(zabbix);
 }
 
 var getServerStatus = function(authToken, user, server) {
-    var token  = "";
+    var token = "";
     zabbix.body = '{"jsonrpc": "2.0","method": "user.login", "params": {"user": "watcher","password": "watcher@"},"id": 1}';
     request(zabbix, function (error, response, body) {
         if (!error && response.statusCode == 200) {
-            token = JSON.parse(body).result;
+	    token = JSON.parse(body).result;
 	    zabbix.body = ' {    "jsonrpc": "2.0",    "method": "hostinterface.get",    "params": {  "search": {            "ip": ["' + server + '"]        }    },    "auth": "' + token +'", "id": 1}';
+
 
     var respString = "";
     request(zabbix, function (error, response, body) {
         if (!error && response.statusCode == 200) {
             var serverList = JSON.parse(body).result;
+            if(serverList.length == 0 ) return sendMessageToSlack("Oops! Server not found", user);
 	    var hostid =serverList[0].hostid;
-	    zabbix.body = ' {    "jsonrpc": "2.0",    "method": "item.get", "params": {"hostids":"'+hostid+'"}, "auth": "' + token +'", "id": 1}';
+	    var ipaddr = serverList[0].ip;
+	    zabbix.body = ' {    "jsonrpc": "2.0",    "method": "item.get", "params": {"hostids":"'+hostid+'"},    "auth": "' + token +'", "id": 1}';
             request(zabbix, function (error, response, body) {
 		if (!error && response.statusCode == 200) {
-		respString = "*Below is the status of apache servers*" + "\n";
-	  	var itemList = JSON.parse(body).result;  
-            for (var i = 0, len = itemList.length; i < len; i++) {
-		respString += itemList[i].name+" : "+itemList[i].lastvalue+ " "+itemList[i].units+ "\n";
+	  	var itemList = JSON.parse(body).result; 
+		var bw = 'NA';
+		var iw = 'NA';
+		var load = 'NA';
+		var rqs = 'NA'; 
+           for (var i = 0, len = itemList.length; i < len; i++) {
+		if(itemList[i]['key_'] == 'apache[localhost,BusyWorkers]') bw = itemList[i].lastvalue;
+		else if(itemList[i]['key_'] == 'apache[localhost,IdleWorkers]') iw = itemList[i].lastvalue;
+		else if(itemList[i]['key_'] == 'apache[localhost,CPULoad]' ) load = itemList[i].lastvalue;
+		else if(itemList[i]['key_'] == 'apache[localhost,ReqPerSec]' ) rqs = itemList[i].lastvalue;
+//		respString += itemList[i].name+" : "+itemList[i].lastvalue+ " "+itemList[i].units+ "\n";
 //                respString += "Server : "  + serverList[i].host + " | Status : " + serverList[i].status + " | Last accessed on : " + serverList[i].lastaccess + " | Errors : " + serverList[i].error + "\n";
             }
-        sendMessageToSlack(respString, user);
+       respString = {
+    "attachments": [
+        {
+            "color": "#3AA3E3",
+            "pretext": "Apache Status for "+ipaddr,
+            "fields": [
+                {
+                    "title": "Busy Workers",
+                    "value": bw+" workers",
+                    "short": true
+                },
+				{
+                    "title": "Idle Workers",
+                    "value": iw+" workers",
+                    "short": true
+                },
+				{
+                    "title": "CPU Load",
+                    "value": load,
+                    "short": true
+                },
+				{
+                    "title": "Requests Per Second",
+                    "value": rqs,
+                    "short": true
+                }
+				
+            ]
+        },
+		{
+			"color": "#8bc34a",
+			"title": "View Available Graphs",
+			"actions": [
+                {
+                    "name": "view-graph",
+                    "text": "View Busy Wokers",
+                    "type": "button",
+                    "value": "chess"
+                },
+				{
+                    "name": "view-graph",
+                    "text": "View Req/Sec",
+                    "type": "button",
+                    "value": "chess"
+                }
+			]
+		}
+    ]
+};
+	sendAttachmentToSlack(JSON.stringify(respString), user);
 	}
 	});
         } else {
@@ -92,12 +151,15 @@ var getServerStatus = function(authToken, user, server) {
 var sendMessageToSlack = function(text, userId) {
         slackResponse.body = '{"text": "' + text + '" , "mrkdwn": true}';
         slackResponse.url = userId;
-console.log(slackResponse);
 //        var url = slackAPI + 'chat.postMessage?token=' + token + "&text=" + text + "&channel=" + userId + "&type=message";
         request(slackResponse, function(error, response, body) {});
 }
 
-
+var sendAttachmentToSlack = function(text, userId) {
+	slackResponse.body = text;
+	slackResponse.url = userId;
+	request(slackResponse, function(error, response, body) {});
+}
 
 /* POST apache server status. */
 router.post('/apache', function(req, res, next) {
