@@ -56,19 +56,19 @@ console.log(zabbix);
 }
 
 var getServerStatus = function(authToken, user, server) {
-
+    var token  = "";
     zabbix.body = '{"jsonrpc": "2.0","method": "user.login", "params": {"user": "watcher","password": "watcher@"},"id": 1}';
     request(zabbix, function (error, response, body) {
         if (!error && response.statusCode == 200) {
-	    zabbix.body = ' {    "jsonrpc": "2.0",    "method": "hostinterface.get",    "params": {  "search": {            "ip": ["' + server + '"]        }    },    "auth": "' + JSON.parse(body).result +'", "id": 1}';
-
+            token = JSON.parse(body).result;
+	    zabbix.body = ' {    "jsonrpc": "2.0",    "method": "hostinterface.get",    "params": {  "search": {            "ip": ["' + server + '"]        }    },    "auth": "' + token +'", "id": 1}';
 
     var respString = "";
     request(zabbix, function (error, response, body) {
         if (!error && response.statusCode == 200) {
             var serverList = JSON.parse(body).result;
 	    var hostid =serverList[0].hostid;
-	    zabbix.body = ' {    "jsonrpc": "2.0",    "method": "item.get", "params": {"hostids":"'+hostid+'"}, ,    "auth": "' + serverList.auth +'", "id": 1}';
+	    zabbix.body = ' {    "jsonrpc": "2.0",    "method": "item.get", "params": {"hostids":"'+hostid+'"}, "auth": "' + token +'", "id": 1}';
             request(zabbix, function (error, response, body) {
 		if (!error && response.statusCode == 200) {
 		respString = "*Below is the status of apache servers*" + "\n";
