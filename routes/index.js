@@ -277,6 +277,24 @@ var getApacheString = function(itemList, ipaddr){
             }
 
         ]
+/*    },
+    {
+        "color": "#8bc34a",
+        "title": "View Available Graphs",
+        "actions": [
+            {
+                "name": "view-graph",
+                "text": "View Busy Wokers",
+                "type": "button",
+                "value": "chess"
+            },
+            {
+                "name": "view-graph",
+                "text": "View Req/Sec",
+                "type": "button",
+                "value": "chess"
+            }
+        ] */
     }
 ]
 };
@@ -344,7 +362,7 @@ console.log(req.body);
     var token = req.body.token;
     var server = req.body.text;
     var respUrl = req.body.response_url;//'https://hooks.slack.com/commands/T25JQQMNV/80832884099/rxUcuwPARiKPg4AiuvEMKMQX';//req.body.response_url;
-    if(token != "bwfvVqs0v2wZ0lH216fwxc8F") {
+    if(token != "QI3OZmyCwtYiu9bc14ay9DMm") {
         res.sendStatus(403);
     }
     var x = getServerStatus(token, respUrl, server, 'mysql');
