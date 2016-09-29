@@ -96,90 +96,9 @@ var sendPowerfulAttachments = function(type, user, itemList, ipaddr){
     if(type == 'disk'){
         respString = getDiskString( itemList, ipaddr );
     }
-    if(type == 'mysql'){
-        respString = getMysqlString( itemList, ipaddr );
-    }
     respString.response_type = 'in_channel';
     sendAttachmentToSlack(JSON.stringify(respString), user);
 }
-
-var getMysqlString = function(itemList, ipaddr){
-    var fields = [];
-    for (var i = 0, len = itemList.length; i < len; i++) {
-        if( itemList[i]['key_'].startsWith('custom.mysql.replication') )
-        {
-            var did = itemList[i]['key_'].substring(25).split(",");
-            var port = did[0];
-            var type = did[1].split("]")[0];
-
-            if(typeof(fields[port]) == 'undefined') fields[port] = [];
-            fields[port][type] = itemList[i]['lastvalue'];
-        }
-        else if( itemList[i]['key_'].startsWith('custom.mysql.status') )
-        {
-            var did = itemList[i]['key_'].substring(20).split(",");
-            var port = did[0];
-            var type = did[1].split("]")[0];
-
-            if(typeof(fields[port]) == 'undefined') fields[port] = [];
-            fields[port][type] = itemList[i]['lastvalue'];
-        }
-        else if ( itemList[i]['key_'].startsWith('custom.mysql.processlist') )
-        {
-            var did = itemList[i]['key_'].substring(25).split(",");
-            var port = did[0].split("]")[0];
-            if(typeof(fields[port]) == 'undefined') fields[port] = [];
-            fields[port]['processlist'] = itemList[i]['lastvalue'];
-        }
-        else if ( itemList[i]['key_'].startsWith('custom.mysql.sleep_processlist') )
-        {
-            var did = itemList[i]['key_'].substring(31).split(",");
-            var port = did[0].split("]")[0];
-            if(typeof(fields[port]) == 'undefined') fields[port] = [];
-            fields[port]['sleep_process'] = itemList[i]['lastvalue'];
-        }
-    }
-
-    var json = {
-        "text": "Disk Space on "+ipaddr,
-        "attachments": []
-    };
-
-    for(obj in fields){
-        json.attachments.push({
-            "color": "good",
-            "title": "Running Port : "+obj,
-            "fields": [{
-                "title": "Process List",
-                "value": fields[obj]['processlist'],
-                "short": true
-                },{
-                    "title": "Sleeping Process",
-                    "value": fields[obj]['sleep_process'],
-                    "short": true
-                },{
-                    "title": "Replication Running",
-                    "value": fields[obj]['Slave_SQL_Running'],
-                    "short": true
-                },{
-                    "title": "Replication Delay",
-                    "value": fields[obj]['Seconds_Behind_Master']+" seconds delay",
-                    "short": true
-                },{
-                    "title": "Connection Refused",
-                    "value": fields[obj]['Aborted_connects'],
-                    "short": true
-                },{
-                    "title": "Queries per Second",
-                    "value": fields[obj]['Queries'],
-                    "short": true
-                }]
-        });
-    }
-
-    return json;
-};
-
 
 var getDiskString = function(itemList, ipaddr){
     var fields = [];
@@ -226,9 +145,7 @@ var getColor = function(p){
 }
 
 var gb = function(val,c){
-    return val;
-    var f = 1024*(c==0?8:1);
-    if(val > 1024 && c<5) return gb(val/f, c+1);
+    if(val > 1024 && c<5) return gb(val/1024, c+1);
     return rnd(val)+" "+scale[c];
 }
 
@@ -277,24 +194,6 @@ var getApacheString = function(itemList, ipaddr){
             }
 
         ]
-/*    },
-    {
-        "color": "#8bc34a",
-        "title": "View Available Graphs",
-        "actions": [
-            {
-                "name": "view-graph",
-                "text": "View Busy Wokers",
-                "type": "button",
-                "value": "chess"
-            },
-            {
-                "name": "view-graph",
-                "text": "View Req/Sec",
-                "type": "button",
-                "value": "chess"
-            }
-        ] */
     }
 ]
 };
